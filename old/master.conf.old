@@ -1,0 +1,89 @@
+[General]
+workingDir = /nfs/data_disks/herc0a/users/zdhughes/manel_xray/
+runlistFile = /nfs/data_links/collaborations/fermi/data/weekly/photon/weekly_photon_runlist.txt
+spacecraftFile = /nfs/data_links/collaborations/fermi/spacecraft/weekly/lat_spacecraft_merged.fits
+saveNameStem = x_ray_source
+ansiColors = True
+run = True
+
+[Stages]
+Main = True
+Months = False
+LC = False
+
+[Main]
+doFilter = True
+doMaketime = True
+doTempo = False
+doFold = False
+doCCUBE = True
+doLivetime = True
+doExposure = True
+doSrc = True
+doLike = False
+
+[MainConfig]
+directory = ${General:workingDir}Main/
+modelDir = ${MainConfig:directory}Models/
+config = /nfs/optimus/home/zdhughes/Desktop/projects/FermiGalSearch/main.conf
+startTime = 239846401
+stopTime = 510205698
+deltaT = NOPASS
+
+[Months]
+doFilter = False
+doMaketime = False
+doTempo = False
+doFold = False
+doSort = False
+doCCUBE = False
+doLivetime = False
+doCombineLivetime = False
+doExposure = False
+doSrc = False
+doLike = False
+
+[MonthsConfig]
+directory = ${General:workingDir}Months/
+modelDir = ${MonthsConfig:directory}Models/
+config = /nfs/optimus/home/zdhughes/Desktop/projects/FermiGalSearch/months.conf
+startTime = 239846401
+stopTime = 510205698
+deltaT = 1209600
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

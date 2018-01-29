@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "Lauching fermRunner with configuration file: "$1
+/nfs/programs/zdhughes/anaconda3/bin/python /home/zdhughes/Desktop/projects/FermiGalSearch/mainRunner.py $1

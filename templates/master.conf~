@@ -1,0 +1,72 @@
+[General]
+workingDir = /nfs/data_disks/herc0a/users/zdhughes/manel_xray/
+runlistFile = /nfs/data_disks/herc0a/users/zdhughes/manel_data/runlist.txt
+spacecraftFile = /nfs/data_disks/herc0a/users/zdhughes/manel_data/spacecraft.fits
+saveNameStem = x_ray_source
+ansiColors = True
+run = True
+verbosity = 2
+
+[Stages]
+Main = True
+
+[Main]
+doFilter = False
+doMaketime = False
+doModel = False
+doTempo = False
+doFold = False
+doSort = False
+doCmap = False
+doCCUBE = False
+doLivetime = False
+doExposure = False
+doSrc = True
+doLike = True
+doModelMap = True
+doResidual = True
+
+[MainConfig]
+directory = ${General:workingDir}Main/
+modelDir = ${MainConfig:directory}Models/
+config = /nfs/optimus/home/zdhughes/manel_xray/main.conf
+startTime = 239846401
+stopTime = 510205698
+deltaT = NOPASS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
