@@ -6,6 +6,23 @@ Created on Wed May 24 13:59:00 2017
 @author: zdhughes
 """
 
+#         MASTER FILE                            CHILD FILE
+#############################          #############################
+#[General]                  #          # [StageConfig]             #
+#>Options                   #          # >settings                 #
+#                           #          #                           #
+#[Sections]                 #          #                           #
+#>selections                #          #                           #
+#                           #          #                           #
+#[Selection]                #          #                           #
+#>stages                    #          #                           #
+#                           #          #                           #
+#[SelectionConfig]          #          #                           #
+#>parameters                #          #                           #
+#                           #          #                           #
+#                           #          #                           #
+#############################          #############################
+
 import general_functions_fermi as GFF
 from configparser import ConfigParser, ExtendedInterpolation
 import subprocess
@@ -14,7 +31,6 @@ import code
 import os
 import numpy as np
 from collections import OrderedDict as od
-import ast
 
 #This class object should hold all the info for a "top" stage. I.e. "Main"+"MainConfig"+the main child config.
 #It gets passed the masterConfig OBJECT and a name of a section within that config object.
@@ -23,89 +39,88 @@ class runlistMember():
 	
 	"""This holds all the information related to a particular run as defined in the master configuration file."""
 	
-	def __init__(self, masterConfig = None, topSectionName = None, c = None):
+	def __init__(self, masterConfig = None, selectionName = None, c = None):
 		
 		"""Loads in the two related sections from the master configuration file and loads in the child config file
 		that holds all the parameters."""
 		
-		def tryeval(val):
-			try:
-				val = ast.literal_eval(val)
-			except:
-				pass
-			return val
-		
 		self.masterConfig = masterConfig if masterConfig is not None else sys.exit('No master config file provided.')
-		self.topSectionName = topSectionName if topSectionName is not None else sys.exit('No top section to load provided.')
+		self.selectionName = selectionName if selectionName is not None else sys.exit('No top section to load provided.')
 		self.c = c if c is not None else GFF.colors()
-		self.topConfigName = self.topSectionName+'Config'
+		self.selectionConfigName = self.selectionName+'Config'
 
-		self.generalSection = od(self.masterConfig.items('General'))
-		self.topSection = od(self.masterConfig.items(self.topSectionName))
-		self.topConfig = od(self.masterConfig.items(self.topConfigName))
+		#From master:
+		#[General] options -> general
+		#The selection options -> stages
+		#the selection config options -> selection config
+		self.general = od(self.masterConfig.items('General'))
+		self.stages = od(self.masterConfig.items(self.selectionName))
+		self.parameters = od(self.masterConfig.items(self.selectionConfigName))
 
 		#code.interact(local=locals())
 		#sys.exit('Code Break!')	
 		
-		for key in self.generalSection:
-			self.generalSection[key] = tryeval(self.generalSection[key])
-		for key in self.topSection:
-			self.topSection[key] = tryeval(self.topSection[key])	
-		for key in self.topConfig:
-			self.topConfig[key] = tryeval(self.topConfig[key])
+		#Cast the above into the correct types.
+		for key in self.general:
+			self.general[key] = GFF.tryeval(self.general[key])
+		for stage in self.stages:
+			self.stages[stage] = GFF.tryeval(self.stages[stage])	
+		for parameter in self.parameters:
+			self.parameters[parameter] = GFF.tryeval(self.parameters[parameter])
 
+		#Read in the child config, as defined in the selection config. DO NOT cast them as types, since they will be written out to files.
 		self.childConfig = ConfigParser(interpolation=ExtendedInterpolation(),inline_comment_prefixes=('#'))
 		self.childConfig.optionxform = str
-		self.childConfig.read(self.topConfig['config'])
+		self.childConfig.read(self.parameters['config'])
 			
 	def printInfo(self):
-		print('Printing topsection '+self.c.green(self.topSectionName))
-		for key in self.topSection:
-			if self.topSection[key] == True:
-				print(self.c.lightgreen(key)+' : '+self.c.lightblue(self.topSection[key]))
+		print('Printing selection '+self.c.green(self.selectionName))
+		for stage in self.stages:
+			if self.stages[stage] == True:
+				print(self.c.lightgreen(stage)+' : '+self.c.lightblue(self.stages[stage]))
 			else:
-				print(self.c.lightgreen(key)+' : '+self.c.lightred(self.topSection[key]))
+				print(self.c.lightgreen(stage)+' : '+self.c.lightred(self.stages[stage]))
 
 		print(self.c.orange('------------------------------'))
 		
-		print('Printing topConfig '+self.c.green(self.topConfigName))
-		for key in self.topConfig:
-			print(self.c.lightgreen(key)+' : '+self.c.lightblue(self.topConfig[key]))
+		print('Printing selection config '+self.c.green(self.selectionConfigName))
+		for parameter in self.parameters:
+			print(self.c.lightgreen(parameter)+' : '+self.c.lightblue(self.parameters[parameter]))
 		
 		print(self.c.orange('------------------------------'))
 
-		print('Printing section fermi parameters from file '+self.c.yellow(self.topConfig['config']))
-		for section in self.childConfig:
-			if section != 'DEFAULT':			
-				print('Printing section '+self.c.green(section))
-				for key in self.childConfig[section]:
-					print(self.c.lightgreen(key)+' : '+self.c.lightblue(self.childConfig[section][key]))
+		print('Printing section fermi parameters from file '+self.c.yellow(self.parameters['config']))
+		for stageConfig in self.childConfig:
+			if stageConfig != 'DEFAULT':			
+				print('Printing stageConfig '+self.c.green(stageConfig))
+				for setting in self.childConfig[stageConfig]:
+					print(self.c.lightgreen(setting)+' : '+self.c.lightblue(self.childConfig[stageConfig][setting]))
 				print(self.c.gray('++++++++++++++++++++++++++++++'))
 				
-	def printSection(self, section):
-		print('Printing section '+self.c.green(section))
-		for key in self.childConfig[section]:
-			print(self.c.lightgreen(key)+' : '+self.c.lightblue(self.childConfig[section][key]))
+	def printSection(self, stageConfig):
+		print('Printing settings for stage-config '+self.c.green(stageConfig))
+		for setting in self.childConfig[stageConfig]:
+			print(self.c.lightgreen(setting)+' : '+self.c.lightblue(self.childConfig[stageConfig][setting]))
 		
 	def getChild(self):
 		return self.childConfig
-	def getChildSection(self, section):
-		return od(self.childConfig.items(section))
+	def getSettings(self, stageConfig):
+		return od(self.childConfig.items(stageConfig))
+
 
 class fermiRunlistMember(runlistMember):
 	
-	def __init__(self, masterConfig = None, topSectionName = None, c = None):
-		runlistMember.__init__(self, masterConfig, topSectionName, c)
+	def __init__(self, masterConfig = None, selectionName = None, c = None):
+		runlistMember.__init__(self, masterConfig, selectionName, c)
 		self.getDefaults()
-		if self.topConfig['deltaT'] != 'NOPASS':
-			self.range = np.arange(int(self.topConfig['startTime']), int(self.topConfig['stopTime']), int(self.topConfig['deltaT']))
+		if self.parameters['deltaT'] != 'NOPASS':
+			self.range = np.arange(int(self.parameters['startTime']), int(self.parameters['stopTime']), int(self.parameters['deltaT']))
 			self.times = list(zip(self.range[:-1],self.range[1:]))
-			self.saveName = [self.generalSection['saveNameStem']+'_'+str(x[0]) for x in self.times]
-			
+			self.saveName = [self.general['saveNameStem']+'_'+str(x[0]) for x in self.times]	
 		else:
-			self.range = [self.topSectionName]
-			self.times = [(int(self.topConfig['startTime']),int(self.topConfig['stopTime']))]
-			self.saveName = self.generalSection['saveNameStem']+'_'+self.topSectionName
+			self.range = [self.selectionName]
+			self.times = [(int(self.parameters['startTime']),int(self.parameters['stopTime']))]
+			self.saveName = self.general['saveNameStem']+'_'+self.selectionName
 			
 	def __iter__(self):
 		return iter(self.times)
@@ -126,7 +141,6 @@ class fermiRunlistMember(runlistMember):
 		self.doLikeFlag = {'expcube':False, 'srcmdl':False, 'sfile':False, 'results':False, 'specfile':False, 'evfile':False, 'scfile':False, 'cmap':False, 'bexpmap':False, 'emin':False, 'emax':False}
 		self.doModelMapFlag = {'srcmaps':False, 'srcmdl':False, 'outfile':False, 'expcube':False, 'bexpmap':False}
 		self.doResidualFlag = {'infile1':False, 'infile2':False, 'outfile':False}
-
 
 		self.doFilterFlag['infile'] = True if self.childConfig['doFilter']['infile'] == 'NOPASS' else self.childConfig['doFilter']['infile']
 		self.doFilterFlag['outfile'] = True if self.childConfig['doFilter']['outfile'] == 'NOPASS' else self.childConfig['doFilter']['outfile']
@@ -183,7 +197,6 @@ class fermiRunlistMember(runlistMember):
 		self.doLikeFlag['emin'] = True if self.childConfig['doLike']['emin'] == 'NOPASS' else self.childConfig['doLike']['emin']
 		self.doLikeFlag['emax'] = True if self.childConfig['doLike']['emax'] == 'NOPASS' else self.childConfig['doLike']['emax']
 
-
 		self.doModelMapFlag['srcmaps'] = True if self.childConfig['doModelMap']['srcmaps'] == 'NOPASS' else self.childConfig['doModelMap']['srcmaps']
 		self.doModelMapFlag['srcmdl'] = True if self.childConfig['doModelMap']['srcmdl'] == 'NOPASS' else self.childConfig['doModelMap']['srcmdl']
 		self.doModelMapFlag['outfile'] = True if self.childConfig['doModelMap']['outfile'] == 'NOPASS' else self.childConfig['doModelMap']['outfile']
@@ -194,22 +207,21 @@ class fermiRunlistMember(runlistMember):
 		self.doResidualFlag['infile2'] = True if self.childConfig['doResidual']['infile2'] == 'NOPASS' else self.childConfig['doResidual']['infile2']
 		self.doResidualFlag['outfile'] = True if self.childConfig['doResidual']['outfile'] == 'NOPASS' else self.childConfig['doResidual']['outfile']
 					
-					
 	def setDefaults(self, inter = 'main', likemodel='', increment=''):
 
-		directory = self.topConfig['directory']
-		defaultStem = directory+self.generalSection['saveNameStem']
-		modelDir = self.topConfig['modelDir']
-		modelStem = modelDir+self.generalSection['saveNameStem']
+		directory = self.parameters['directory']
+		defaultStem = directory+self.general['saveNameStem']
+		modelDir = self.parameters['modelDir']
+		modelStem = modelDir+self.general['saveNameStem']
 		if increment:
 			interIncrement = inter+'_'+str(increment)
 		else:
 			interIncrement = inter
 		
-		self.childConfig['doFilter']['infile'] = self.generalSection['runlistFile'] if self.doFilterFlag['infile'] == True else self.doFilterFlag['outfile']
+		self.childConfig['doFilter']['infile'] = self.general['runlistFile'] if self.doFilterFlag['infile'] == True else self.doFilterFlag['outfile']
 		self.childConfig['doFilter']['outfile'] = defaultStem+'_'+str(interIncrement)+'_filter.fits' if self.doFilterFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doFilterFlag['outfile']+'.fits'
 
-		self.childConfig['doMaketime']['scfile'] = self.generalSection['spacecraftFile'] if self.doMaketimeFlag['scfile'] == True else self.doMaketimeFlag['scfile']
+		self.childConfig['doMaketime']['scfile'] = self.general['spacecraftFile'] if self.doMaketimeFlag['scfile'] == True else self.doMaketimeFlag['scfile']
 		self.childConfig['doMaketime']['evfile'] = defaultStem+'_'+str(interIncrement)+'_filter.fits' if self.doMaketimeFlag['evfile'] == True else defaultStem+'_'+str(interIncrement)+self.doMaketimeFlag['evfile']+'.fits'
 		self.childConfig['doMaketime']['outfile'] = defaultStem+'_'+str(interIncrement)+'_gti.fits' if self.doMaketimeFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doMaketimeFlag['outfile']+'.fits'
 		
@@ -218,33 +230,33 @@ class fermiRunlistMember(runlistMember):
 		self.childConfig['doModel']['wd'] = modelDir if self.doModelFlag['wd'] == True else self.doModelFlag['wd']
 		
 		self.childConfig['doTempo']['infile'] = defaultStem+'_'+str(interIncrement)+'_gti.fits' if self.doTempoFlag['infile'] == True else defaultStem+'_'+str(interIncrement)+self.doTempoFlag['infile']+'.fits'
-		self.childConfig['doTempo']['scfile'] = self.generalSection['spacecraftFile']if self.doTempoFlag['scfile'] == True else self.doTempoFlag['scfile']
+		self.childConfig['doTempo']['scfile'] = self.general['spacecraftFile']if self.doTempoFlag['scfile'] == True else self.doTempoFlag['scfile']
 		self.childConfig['doTempo']['outfile'] = defaultStem+'_'+str(interIncrement)+'_phasecuts.fits'if self.doTempoFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doTempoFlag['outfile']+'.fits'
 		
 		self.childConfig['doFold']['infile'] = defaultStem+'_'+str(interIncrement)+'_phasecuts.fits' if self.doFoldFlag['infile'] == True else defaultStem+'_'+str(interIncrement)+self.doFoldFlag['infile']+'.fits'
 		self.childConfig['doFold']['outfile'] = defaultStem+'_'+str(interIncrement)+'_binary.fits' if self.doFoldFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doFoldFlag['outfile']+'.fits'
 		
 		self.childConfig['doSort']['infile'] = defaultStem+'_'+str(interIncrement)+'_phasecuts.fits' if self.doSortFlag['infile'] == True else defaultStem+'_'+str(interIncrement)+self.doSortFlag['infile']+'.fits'
-		self.childConfig['doSort']['scfile'] = self.generalSection['spacecraftFile'] if self.doSortFlag['scfile'] == True else self.doSortFlag['scfile']
+		self.childConfig['doSort']['scfile'] = self.general['spacecraftFile'] if self.doSortFlag['scfile'] == True else self.doSortFlag['scfile']
 		self.childConfig['doSort']['outfile'] = defaultStem+'_'+str(interIncrement)+'_sorted.fits' if self.doSortFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doSortFlag['outfile']+'.fits'
 		
 		self.childConfig['doCmap']['evfile'] = defaultStem+'_'+str(interIncrement)+'_binary.fits' if self.doCmapFlag['evfile'] == True else defaultStem+'_'+str(interIncrement)+self.doCmapFlag['evfile']+'.fits'
-		self.childConfig['doCmap']['scfile'] = self.generalSection['spacecraftFile'] if self.doCmapFlag['scfile'] == True else self.doCmapFlag['scfile']
+		self.childConfig['doCmap']['scfile'] = self.general['spacecraftFile'] if self.doCmapFlag['scfile'] == True else self.doCmapFlag['scfile']
 		self.childConfig['doCmap']['outfile'] = defaultStem+'_'+str(interIncrement)+'_cmap.fits' if self.doCmapFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doCmapFlag['outfile']+'.fits'
 		
 		self.childConfig['doCCUBE']['evfile'] = defaultStem+'_'+str(interIncrement)+'_binary.fits' if self.doCCUBEFlag['evfile'] == True else defaultStem+'_'+str(interIncrement)+self.doCCUBEFlag['evfile']+'.fits'
-		self.childConfig['doCCUBE']['scfile'] = self.generalSection['spacecraftFile'] if self.doCCUBEFlag['scfile'] == True else self.doCCUBEFlag['scfile']
+		self.childConfig['doCCUBE']['scfile'] = self.general['spacecraftFile'] if self.doCCUBEFlag['scfile'] == True else self.doCCUBEFlag['scfile']
 		self.childConfig['doCCUBE']['outfile'] = defaultStem+'_'+str(interIncrement)+'_ccube.fits' if self.doCCUBEFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doCCUBEFlag['outfile']+'.fits'
 		
 		self.childConfig['doLivetime']['evfile'] = defaultStem+'_'+str(interIncrement)+'_binary.fits' if self.doLivetimeFlag['evfile'] == True else defaultStem+'_'+str(interIncrement)+self.doLivetimeFlag['evfile']+'.fits'
-		self.childConfig['doLivetime']['scfile'] = self.generalSection['spacecraftFile'] if self.doLivetimeFlag['scfile'] == True else self.doLivetimeFlag['scfile']
+		self.childConfig['doLivetime']['scfile'] = self.general['spacecraftFile'] if self.doLivetimeFlag['scfile'] == True else self.doLivetimeFlag['scfile']
 		self.childConfig['doLivetime']['outfile'] = defaultStem+'_'+str(interIncrement)+'_livetime.fits' if self.doLivetimeFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doLivetimeFlag['outfile']+'.fits'
 		
 		self.childConfig['doExposure']['infile'] = defaultStem+'_'+str(interIncrement)+'_livetime.fits' if self.doExposureFlag['infile'] == True else defaultStem+'_'+str(interIncrement)+self.doExposureFlag['infile']+'.fits'
 		self.childConfig['doExposure']['cmap'] = defaultStem+'_'+str(interIncrement)+'_ccube.fits' if self.doExposureFlag['cmap'] == True else defaultStem+'_'+str(interIncrement)+self.doExposureFlag['cmap']+'.fits'
 		self.childConfig['doExposure']['outfile'] = defaultStem+'_'+str(interIncrement)+'_exposure.fits' if self.doExposureFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+self.doExposureFlag['outfile']+'.fits'
 		
-		self.childConfig['doSrc']['scfile'] = self.generalSection['spacecraftFile'] if self.doSrcFlag['scfile'] == True else self.doSrcFlag['scfile']
+		self.childConfig['doSrc']['scfile'] = self.general['spacecraftFile'] if self.doSrcFlag['scfile'] == True else self.doSrcFlag['scfile']
 		self.childConfig['doSrc']['expcube'] = defaultStem+'_'+str(interIncrement)+'_livetime.fits' if self.doSrcFlag['expcube'] == True else defaultStem+'_'+str(interIncrement)+self.doSrcFlag['expcube']+'.fits'
 		self.childConfig['doSrc']['cmap'] = defaultStem+'_'+str(interIncrement)+'_ccube.fits' if self.doSrcFlag['cmap'] == True else defaultStem+'_'+str(interIncrement)+self.doSrcFlag['cmap']+'.fits'
 		self.childConfig['doSrc']['srcmdl'] = modelStem+'_'+str(interIncrement)+str(likemodel)+'_model.xml' if self.doSrcFlag['srcmdl'] == True else self.doSrcFlag['srcmdl']
@@ -261,17 +273,15 @@ class fermiRunlistMember(runlistMember):
 		self.childConfig['doLike']['emin'] = '100' if self.doLikeFlag['emin'] == True else self.doLikeFlag['emin']
 		self.childConfig['doLike']['emax'] = '300000' if self.doLikeFlag['emax'] == True else self.doLikeFlag['emax']
 
-	
 		self.childConfig['doModelMap']['srcmaps'] = defaultStem+'_'+str(interIncrement)+str(likemodel)+'_srcmap.fits' if self.doModelMapFlag['srcmaps'] == True else defaultStem+'_'+str(interIncrement)+str(likemodel)+self.doModelMapFlag['srcmap']+'.fits'
 		self.childConfig['doModelMap']['srcmdl'] = modelDir+'out_'+self.childConfig['doLike']['srcmdl'].split('/')[-1] if self.doModelMapFlag['srcmdl'] == True else self.doModelMapFlag['srcmdl']
 		self.childConfig['doModelMap']['outfile'] = defaultStem+'_'+str(interIncrement)+str(likemodel)+'_model.fits' if self.doModelMapFlag['outfile'] == True else defaultStem+'_'+str(interIncrement)+str(likemodel)+self.doModelMapFlag['outfile']+'.fits'
 		self.childConfig['doModelMap']['expcube'] = defaultStem+'_'+str(interIncrement)+'_livetime.fits' if self.doModelMapFlag['expcube'] == True else defaultStem+'_'+str(interIncrement)+self.doModelMapFlag['expcube']+'.fits'
 		self.childConfig['doModelMap']['bexpmap'] = defaultStem+'_'+str(interIncrement)+'_exposure.fits' if self.doModelMapFlag['bexpmap'] == True else defaultStem+'_'+str(interIncrement)+self.doModelMapFlag['bexpmap']+'.fits'
 
-		self.childConfig['doResidual']['infile1'] = self.generalSection['saveNameStem']+'_'+str(interIncrement)+'_cmap.fits' if self.doResidualFlag['infile1'] == True else self.generalSection['saveNameStem']+'_'+str(interIncrement)+self.doResidualFlag['infile1']+'.fits'
-		self.childConfig['doResidual']['infile2'] = self.generalSection['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+'_model.fits' if self.doResidualFlag['infile2'] == True else self.generalSection['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+self.doResidualFlag['infile2']+'.fits'
-		self.childConfig['doResidual']['outfile'] = self.generalSection['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+'_residual.fits' if self.doResidualFlag['outfile'] == True else self.generalSection['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+self.doResidualFlag['outfile']+'.fits'
-
+		self.childConfig['doResidual']['infile1'] = self.general['saveNameStem']+'_'+str(interIncrement)+'_cmap.fits' if self.doResidualFlag['infile1'] == True else self.general['saveNameStem']+'_'+str(interIncrement)+self.doResidualFlag['infile1']+'.fits'
+		self.childConfig['doResidual']['infile2'] = self.general['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+'_model.fits' if self.doResidualFlag['infile2'] == True else self.general['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+self.doResidualFlag['infile2']+'.fits'
+		self.childConfig['doResidual']['outfile'] = self.general['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+'_residual.fits' if self.doResidualFlag['outfile'] == True else self.general['saveNameStem']+'_'+str(interIncrement)+str(likemodel)+self.doResidualFlag['outfile']+'.fits'
 
 	def unsetDefaults(self):
 
@@ -358,22 +368,26 @@ class ecumenical():
 		self.masterConfig.read(masterConfigFilename)
 		
 		print('Loading in the master configuration file...')
-		self.generalSection = self.masterConfig['General']
-		self.stagesSection = self.masterConfig['Stages']
 		
-		if self.generalSection.getboolean('ansiColors') == True:
+		self.general = od(self.masterConfig['General'])
+		self.sections = od(self.masterConfig['Sections'])
+
+		for key in self.general:
+			self.general[key] = GFF.tryeval(self.general[key])		
+		for selection in self.sections:
+			self.sections[selection] = GFF.tryeval(self.sections[selection])		
+		
+		if self.general['ansiColors'] == True:
 			self.c.enableColors()
 			self.c.confirmColorsDonger()
 
 		self.members = od({})
-		for stage in self.stagesSection:
-			if self.stagesSection.getboolean(stage) == True:
-				self.members[stage] = fermiRunlistMember(self.masterConfig, stage, self.c)
+		for selection in self.sections:
+			if self.sections[selection] == True:
+				self.members[selection] = fermiRunlistMember(self.masterConfig, selection, self.c)
 				
 	def __getitem__(self, key):
 		return self.members[key]
 
 	def to_list(self):
 		return list(self.members.values())
-		
-

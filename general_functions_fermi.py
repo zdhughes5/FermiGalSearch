@@ -137,7 +137,7 @@ def getCondorFermiParameters(directory, sectionName, saveName, likemodel='main')
 
 	return job, executable, textDir, entries
 
-class tee:
+class tee():
 	
 	"tee implemented in python"
 	
@@ -165,8 +165,7 @@ class tee:
 		self.fd2.flush()
 
 
-
-class colors:
+class colors():
 	
 	"""This class will color console text output using ANSI codes."""
 
@@ -376,14 +375,14 @@ class condorHandler():
 
 	def addEntry(self, entries):
 		
+		"""Takes a dictionary and adds them as condor queue entries."""
+		
 		colorState = self.c.getState()
 	
 		if entries == None:
 			print(self.c.red('Warning: no entries given in condor header creator. This is probably wrong!'))
 	
-		if colorState:
-			self.c.disableColors()
-	
+		if colorState: self.c.disableColors()	
 		if 'requirements' in entries:
 			self.condorJob.write('requirements'+' = '+entries['requirements']+'\n')
 			del entries['requirements']
@@ -410,8 +409,7 @@ class condorHandler():
 		self.condorJob.write('\n')
 		self.condorJob.flush()
 	
-		if colorState:
-			self.c.enableColors()
+		if colorState: self.c.enableColors()
 				
 	def close(self):
 		self.condorJob.close()
@@ -623,7 +621,12 @@ def setCommandlineArgs(arguments):
 	return lineToReturn
 
 
-
+def tryeval(val):
+	try:
+		val = ast.literal_eval(val)
+	except:
+		pass
+	return val
 
 
 
